@@ -48,4 +48,11 @@ export class AuthController {
     };
     return authOutput;
   }
+
+  @Post('logout')
+  async logout(@Req() request: Request): Promise<string> {
+    request.res.clearCookie('refresh_token', { signed: true });
+    request.res.clearCookie('id');
+    return 'Logout success';
+  }
 }
