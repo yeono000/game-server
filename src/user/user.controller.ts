@@ -11,6 +11,7 @@ import { UserService } from './user.service';
 import { User } from './user.entity';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { UserInput } from './dto/user.input';
+import { Public } from '../constants';
 
 @Controller('user')
 @ApiTags('User')

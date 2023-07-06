@@ -1,9 +1,13 @@
+import { RefreshToken } from 'src/auth/refreshToken.entity';
 import {
   Entity,
   Column,
   PrimaryGeneratedColumn,
   CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
+import { UserInput } from './dto/user.input';
 
 @Entity()
 export class User {
@@ -31,6 +35,10 @@ export class User {
   @CreateDateColumn({ type: 'timestamp' })
   @Column({ default: null, nullable: true })
   createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamp' })
+  @Column({ default: null, nullable: true })
+  updatedAt: Date;
 
   @Column({ default: null, nullable: true })
   deletedAt: Date;

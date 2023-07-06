@@ -26,7 +26,13 @@ export class UserService {
   }
 
   async create(user: UserInput): Promise<User> {
-    return await this.userRepository.save(user);
+    const existUser = await this.userRepository.findOne({
+      where: { username: user.username },
+    });
+    if (existUser) {
+      throw new Error('Username is already exist');
+    }
+    return await this.userRepository.save({ createdAt: new Date(), ...user });
   }
 
   async update(id: number, user: UserInput): Promise<User> {
