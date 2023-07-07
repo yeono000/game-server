@@ -29,6 +29,7 @@ export class UserController {
   }
 
   @Post()
+  @Public()
   @ApiBody({ type: UserInput })
   async create(@Body() user: UserInput): Promise<User> {
     return this.userService.create(user);
