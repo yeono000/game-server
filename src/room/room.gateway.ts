@@ -44,7 +44,9 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('message')
   handleMessage(client: Socket, message: string) {
     const userId = client.handshake.query.userId as string;
-    this.server.emit('message', userId);
+    // TEST - message -> echo
+    this.server.emit('message', message);
+    // this.server.emit('message', userId);
   }
 
   @SubscribeMessage('createRoom')
@@ -66,6 +68,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     }
   }
+
   @SubscribeMessage('startRoom')
   handleStartRoom(client: Socket, roomId: string) {
     this.server.emit('roomStarted', roomId);
