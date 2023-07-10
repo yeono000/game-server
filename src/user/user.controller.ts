@@ -36,11 +36,8 @@ export class UserController {
   }
 
   @Put(':id')
-  @ApiBody({ type: UserInput })
-  async update(
-    @Param('id') id: number,
-    @Body() user: UserInput,
-  ): Promise<User> {
+  @ApiBody({ type: User })
+  async update(@Param('id') id: number, @Body() user: User): Promise<User> {
     return this.userService.update(id, user);
   }
 

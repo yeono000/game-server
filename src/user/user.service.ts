@@ -35,7 +35,7 @@ export class UserService {
     return await this.userRepository.save({ createdAt: new Date(), ...user });
   }
 
-  async update(id: number, user: UserInput): Promise<User> {
+  async update(id: number, user: User): Promise<User> {
     await this.userRepository.update(id, user);
     return await this.userRepository.findOne({ where: { id: id } });
   }

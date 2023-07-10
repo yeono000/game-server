@@ -5,9 +5,11 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  OneToMany,
+  ManyToOne,
+  OneToOne,
 } from 'typeorm';
 import { UserInput } from './dto/user.input';
+import { Room } from '../room/room.entity';
 
 @Entity()
 export class User {
@@ -20,8 +22,11 @@ export class User {
   @Column({ nullable: false, type: 'varchar' })
   password: string;
 
-  @Column({ nullable: false, type: 'varchar' })
-  name: string;
+  @ManyToOne(() => Room, (room) => room.players, { nullable: true })
+  room: Room;
+
+  @OneToOne(() => Room, (room) => room.host, { nullable: true })
+  hostingRoom: Room;
 
   @Column({ nullable: true, type: 'varchar', default: 'example@gmail.com' })
   email: string;
