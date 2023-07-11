@@ -134,19 +134,23 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('game1_selection')
-  handleSelect(client: Socket, selection: number, roomId: number) {
-    this.selectRoom(client, selection, roomId);
+  handleSelect(client: Socket, selection: number[]) {
+    this.selectRoom(client, selection);
   }
-  async selectRoom(client: Socket, selection: number, roomId: number) {
+  async selectRoom(client: Socket, selection: number[]) {
     try {
+      const selectedNum = Number(selection[0]);
+      const roomId = Number(selection[1]);
       const userId = client.handshake.query.userId as string;
       const room = await this.roomService.findRoomById(roomId);
       const game1 = room.game[0];
       const overUser: number[] = JSON.parse(game1.gameOverUser);
-      game1.count -= selection;
+      game1.count -= selectedNum;
+      //숫자가 0 이하일때 (패배자 선정)
       if (game1.count <= 0) {
         game1.gameOverUser = JSON.stringify(overUser.push(Number(userId)));
         game1.playerNum -= 1;
+        //다음 라운드 재셋팅
         if (overUser.length < 2 && game1.playerNum > 2) {
           game1.count = 31;
           game1.index = JSON.stringify(
@@ -164,6 +168,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
               });
             }
           }
+          //게임 끝
         } else {
           game1.state = 'end';
           await this.game1Service.update(game1.id, game1);
@@ -174,8 +179,13 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
             }
           }
         }
-      } else {
+      }
+      // 다음 턴 진행
+      else {
         game1.now += 1;
+        if (game1.now == game1.playerNum) {
+          game1.now = 0;
+        }
         await this.game1Service.update(game1.id, game1);
         const playerSocket = this.getUserSocketsByRoomId(room.players);
         console.log(playerSocket);
