@@ -1,3 +1,4 @@
+import { Room } from 'src/room/room.entity';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -13,18 +14,21 @@ import { UserService } from '../user/user.service';
 import { Dependencies } from '@nestjs/common';
 import { RoomInput } from './dto/room.input';
 import { User } from '../user/user.entity';
+import { Game1Service } from '../game1/game1.service';
 
 @WebSocketGateway()
 export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly roomService: RoomService,
     private readonly userService: UserService,
+    private readonly game1Service: Game1Service,
   ) {}
   @WebSocketServer() server: Server;
-  connectedUsers: Set<string> = new Set();
+  connectedUsers: Map<string, Socket> = new Map();
 
   handleConnection(client: Socket) {
     const userId = client.handshake.query.userId as string;
+    console.log(userId + 'connected user id');
     // jwt 토큰 인증 부분
     // const token = client.handshake.headers.authorization;
     // const secretKey = 'jwtConstants';
@@ -36,7 +40,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // } catch (error) {
     //   console.error('Authorization error:', error.message);
     // }
-    this.connectedUsers.add(userId);
+    this.connectedUsers.set(userId, client);
     this.server.emit('userConnected', userId);
     console.log(`Client connected: ${client.id}, ${userId}`);
   }
@@ -51,6 +55,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('message')
   handleMessage(client: Socket, message: string) {
     const userId = client.handshake.query.userId as string;
+    console.log(userId + 'connected user id');
     // TEST - message -> echo
     this.server.emit('message', message);
     // this.server.emit('message', userId);
@@ -101,22 +106,104 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('startRoom')
-  handleStartRoom(client: Socket, roomId: string) {
-    this.server.emit('roomStarted', roomId);
+  @SubscribeMessage('game1_start')
+  handleStartRoom(client: Socket, roomId: number) {
+    this.startRoom(client, roomId);
+  }
+  async startRoom(client: Socket, roomId: number) {
+    try {
+      const room = await this.roomService.findRoomById(roomId);
+      const game1 = await this.game1Service.create(room);
+      const playerSocket = this.getUserSocketsByRoomId(room.players);
+      console.log(playerSocket.length);
+      if (playerSocket.length > 0) {
+        for (const socketId in playerSocket) {
+          playerSocket[socketId].emit('game1_userInit', {
+            userList: room.players.map((player) => player.id.toString()),
+            userName: room.players.map((player) => player.username),
+          });
+          playerSocket[socketId].emit('game1_turn', {
+            userId: JSON.parse(game1.index)[game1.now].toString(),
+            num: game1.count,
+          });
+        }
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  @SubscribeMessage('game1_selection')
+  handleSelect(client: Socket, selection: number, roomId: number) {
+    this.selectRoom(client, selection, roomId);
+  }
+  async selectRoom(client: Socket, selection: number, roomId: number) {
+    try {
+      const userId = client.handshake.query.userId as string;
+      const room = await this.roomService.findRoomById(roomId);
+      const game1 = room.game[0];
+      const overUser: number[] = JSON.parse(game1.gameOverUser);
+      game1.count -= selection;
+      if (game1.count <= 0) {
+        game1.gameOverUser = JSON.stringify(overUser.push(Number(userId)));
+        game1.playerNum -= 1;
+        if (overUser.length < 2 && game1.playerNum > 2) {
+          game1.count = 31;
+          game1.index = JSON.stringify(
+            room.players
+              .map((player) => player.id)
+              .sort(() => Math.random() - 0.5),
+          );
+          game1.now = 0;
+          await this.game1Service.update(game1.id, game1);
+          const playerSocket = this.getUserSocketsByRoomId(room.players);
+          if (playerSocket.length > 0) {
+            for (const socketId in playerSocket) {
+              playerSocket[socketId].emit('game1_gameOver', {
+                userId: userId,
+              });
+            }
+          }
+        } else {
+          game1.state = 'end';
+          await this.game1Service.update(game1.id, game1);
+          const playerSocket = this.getUserSocketsByRoomId(room.players);
+          if (playerSocket.length > 0) {
+            for (const socketId in playerSocket) {
+              playerSocket[socketId].emit('game1_gameEnd', {});
+            }
+          }
+        }
+      } else {
+        game1.now += 1;
+        await this.game1Service.update(game1.id, game1);
+        const playerSocket = this.getUserSocketsByRoomId(room.players);
+        console.log(playerSocket);
+        if (playerSocket.length > 0) {
+          for (const socketId in playerSocket) {
+            playerSocket[socketId].emit('game1_userSelection', {
+              selection: game1.count,
+            });
+            playerSocket[socketId].emit('game1_turn', {
+              userId: JSON.parse(game1.index)[game1.now].toString(),
+              num: game1.now,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   getUserSocketsByRoomId(players: User[]): Socket[] {
-    const connectedSockets = this.server.sockets.sockets;
-    const connectedUsers: Socket[] = [];
-    const playersId = players.map((player) => player.id);
-    for (const socketId in connectedSockets) {
-      const socket = connectedSockets[socketId] as Socket;
-      const userId = socket.handshake.query.userId as string;
-      if (userId in playersId) {
-        connectedUsers.push(socket);
+    const users = [];
+    players.forEach((player) => {
+      const userSocket = this.connectedUsers.get(player.id.toString());
+      if (userSocket) {
+        users.push(this.connectedUsers.get(player.id.toString()));
       }
-    }
-    return connectedUsers;
+    });
+    return users;
   }
 }

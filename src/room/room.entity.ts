@@ -10,6 +10,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { User } from '../user/user.entity';
+import { Game1 } from '../game1/game1.entity';
 
 @Entity()
 export class Room {
@@ -37,6 +38,10 @@ export class Room {
   @UpdateDateColumn({ type: 'timestamp' })
   @Column({ default: null, nullable: true })
   updatedAt: Date;
+
+  @OneToMany(() => Game1, (game) => game.room, { nullable: true })
+  @JoinColumn()
+  game: Game1[];
 
   @Column({ default: null, nullable: true })
   deletedAt: Date;

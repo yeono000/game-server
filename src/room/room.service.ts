@@ -16,6 +16,7 @@ export class RoomService {
       .createQueryBuilder('room')
       .leftJoinAndSelect('room.host', 'host')
       .leftJoinAndSelect('room.players', 'players')
+      .leftJoinAndSelect('room.game', 'game')
       .where('room.deletedAt IS NULL')
       .getMany();
     return answer;
@@ -26,8 +27,10 @@ export class RoomService {
       .createQueryBuilder('room')
       .leftJoinAndSelect('room.host', 'host')
       .leftJoinAndSelect('room.players', 'players')
+      .leftJoinAndSelect('room.game', 'game')
       .where('room.id = :id', { id })
       .getOne();
+    console.log(answer, id);
     return answer;
   }
 
@@ -36,6 +39,7 @@ export class RoomService {
       .createQueryBuilder('room')
       .leftJoinAndSelect('room.host', 'host')
       .leftJoinAndSelect('room.players', 'players')
+      .leftJoinAndSelect('room.game', 'game')
       .where('room.roomName LIKE :roomName', { roomName: `%${roomName}%` })
       .getOne();
     return answer;

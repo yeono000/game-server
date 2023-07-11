@@ -1,4 +1,3 @@
-import { RefreshToken } from 'src/auth/refreshToken.entity';
 import {
   Entity,
   Column,
