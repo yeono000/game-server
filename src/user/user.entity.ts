@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   OneToOne,
+  JoinColumn,
 } from 'typeorm';
 import { UserInput } from './dto/user.input';
 import { Room } from '../room/room.entity';
@@ -21,6 +22,7 @@ export class User {
   @Column({ nullable: false, type: 'varchar' })
   password: string;
 
+  @JoinColumn()
   @ManyToOne(() => Room, (room) => room.players, { nullable: true })
   room: Room;
 

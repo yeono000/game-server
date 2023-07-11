@@ -18,11 +18,25 @@ export class UserService {
   }
 
   async findUserById(id: number): Promise<User> {
-    return await this.userRepository.findOne({ where: { id: id } });
+    const answer = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.room', 'room')
+      .where('user.id = :id', { id })
+      .getOne();
+    console.log(answer, id);
+    return answer;
+    // return await this.userRepository.findOne({ where: { id: id } });
   }
 
   async findUser(username: string): Promise<User> {
-    return await this.userRepository.findOne({ where: { username: username } });
+    const answer = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.room', 'room')
+      .where('user.username = :username', { username })
+      .getOne();
+    console.log(answer, username);
+    return answer;
+    // return await this.userRepository.findOne({ where: { username: username } });
   }
 
   async create(user: UserInput): Promise<User> {
