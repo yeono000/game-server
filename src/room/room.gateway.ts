@@ -196,7 +196,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
             });
             playerSocket[socketId].emit('game1_turn', {
               userId: JSON.parse(game1.index)[game1.now].toString(),
-              num: game1.now,
+              num: game1.count,
             });
           }
         }
