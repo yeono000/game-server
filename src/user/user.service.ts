@@ -50,7 +50,16 @@ export class UserService {
   }
 
   async update(id: number, user: User): Promise<User> {
-    await this.userRepository.update(id, user);
+    console.log('user', user);
+    console.log('id', id);
+    try {
+      await this.userRepository.update(id, user);
+      const u = await this.userRepository.findOne({ where: { id: id } });
+      console.log(u);
+    }
+    catch (e) {
+      console.log(e)
+    }
     return await this.userRepository.findOne({ where: { id: id } });
   }
 

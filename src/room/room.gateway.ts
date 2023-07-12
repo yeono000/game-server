@@ -101,6 +101,31 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       }
       console.log(room.players);
+      client.emit('message', roomId);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  @SubscribeMessage('exitRoom')
+  handleExitRoom(client: Socket, roomId: string) {
+    this.ExitRoom(client, roomId);
+  }
+  async ExitRoom(client: Socket, roomId: string) {
+    try {
+      const userId = client.handshake.query.userId as string;
+      const user = await this.userService.findUserById(Number(userId));
+      const room = await this.roomService.findRoomById(Number(roomId));
+      user.room = null;
+      await this.userService.update(Number(userId), user);
+      const playerSocket = this.getUserSocketsByRoomId(room.players);
+      console.log(playerSocket);
+      if (playerSocket.length > 0) {
+        for (const socketId in playerSocket) {
+          playerSocket[socketId].emit('exitUser', userId);
+        }
+      }
+      console.log(room.players);
     } catch (error) {
       console.error(error);
     }
