@@ -10,6 +10,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RoomModule } from './room/room.module';
 import { Game1Module } from './game1/game1.module';
+import { UploadController } from './upload/upload.controller';
+import { ImageController } from './upload/image.controller';
 
 @Module({
   imports: [
@@ -32,7 +34,7 @@ import { Game1Module } from './game1/game1.module';
     Game1Module,
     RoomModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, UploadController, ImageController],
   providers: [
     AppService,
     // {
