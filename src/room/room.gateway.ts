@@ -26,9 +26,10 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   connectedUsers: Map<string, Socket> = new Map();
 
+  //연결 되었을 때
   handleConnection(client: Socket) {
     const userId = client.handshake.query.userId as string;
-    console.log(userId + 'connected user id');
+    console.log(`[ Connected ] userid :  ${userId}, clientid : ${client.id}`);
     // jwt 토큰 인증 부분
     // const token = client.handshake.headers.authorization;
     // const secretKey = 'jwtConstants';
@@ -42,26 +43,26 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // }
     this.connectedUsers.set(userId, client);
     this.server.emit('userConnected', userId);
-    console.log(`Client connected: ${client.id}, ${userId}`);
   }
 
+  //연결이 끊겼을 때
   handleDisconnect(client: Socket) {
     const userId = client.handshake.query.userId as string;
     this.connectedUsers.delete(userId);
+    console.log(
+      `[ ! disconnected ] userid :  ${userId}, clientid : ${client.id}`,
+    );
     this.server.emit('userDisconnected', userId);
-    console.log(`Client disconnected: ${client.id}, ${userId}`);
   }
 
+  //메세지 전송 (에코)
   @SubscribeMessage('message')
   handleMessage(client: Socket, message: string) {
     const userId = client.handshake.query.userId as string;
-    console.log(userId + 'connected user id');
-    // TEST - message -> echo
-    this.server.emit('message', message);
-    // this.server.emit('message', userId);
+    this.server.emit('message', `메세지 내용: ${message}`);
   }
 
-  //방 생성
+  //방 생성 (인자 : [string, string] - [방이름, 방이미지])
   @SubscribeMessage('createRoom')
   handleCreateRoom(client: Socket, roomName: string) {
     this.createRoom(client, roomName);
@@ -81,7 +82,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  //방 참가
+  //방 생성 (인자 : string - 방 아이디)
   @SubscribeMessage('enterRoom')
   handleEnterRoom(client: Socket, roomId: string) {
     this.EnterRoom(client, roomId);
@@ -91,22 +92,26 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const userId = client.handshake.query.userId as string;
       const user = await this.userService.findUserById(Number(userId));
       const room = await this.roomService.findRoomById(Number(roomId));
+      console.log(
+        `[ Enter ] : ${user.id}, ${user.username} 유저가 방 ${room.id} 에 입장합니다.`,
+      );
       user.room = room;
       await this.userService.update(Number(userId), user);
-      const playerSocket = this.getUserSocketsByRoomId(room.players);
-      console.log(playerSocket);
+      const updatedRoom = await this.roomService.findRoomById(Number(roomId));
+      const playerSocket = this.getUserSocketsByRoomId(updatedRoom.players);
+      //들어온 유저 포함 모두에게 전송 -> 업데이트
       if (playerSocket.length > 0) {
         for (const socketId in playerSocket) {
           playerSocket[socketId].emit('newUser', userId);
         }
       }
-      console.log(room.players);
       client.emit('message', roomId);
     } catch (error) {
       console.error(error);
     }
   }
 
+  //방 나가기 (인자 : string - 방 아이디)
   @SubscribeMessage('exitRoom')
   handleExitRoom(client: Socket, roomId: string) {
     this.ExitRoom(client, roomId);
@@ -116,16 +121,36 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const userId = client.handshake.query.userId as string;
       const user = await this.userService.findUserById(Number(userId));
       const room = await this.roomService.findRoomById(Number(roomId));
-      user.room = null;
-      await this.userService.update(Number(userId), user);
       const playerSocket = this.getUserSocketsByRoomId(room.players);
-      console.log(playerSocket);
-      if (playerSocket.length > 0) {
-        for (const socketId in playerSocket) {
-          playerSocket[socketId].emit('exitUser', userId);
+      console.log(
+        `[ Exit ] : ${user.id}, ${user.username} 유저가 방을 나갑니다.`,
+      );
+      //호스트이면 방 삭제
+      if (user.id == room.host.id) {
+        console.log(
+          `[ Delete ] : 호스트가 나가서 ${room.id} ${room.roomName} 방을 삭제합니다.`,
+        );
+        for (const player of room.players) {
+          player.room = null;
+          await this.userService.update(player.id, player);
+        }
+        //모두에게 삭제를 알림
+        await this.roomService.delete(Number(roomId));
+        if (playerSocket.length > 0) {
+          for (const socketId in playerSocket) {
+            playerSocket[socketId].emit('roomDelete', roomId);
+          }
+        }
+      } else {
+        user.room = null;
+        await this.userService.update(Number(userId), user);
+        //나간 유저 포함 모두에게 전송 -> 업데이트
+        if (playerSocket.length > 0) {
+          for (const socketId in playerSocket) {
+            playerSocket[socketId].emit('exitUser', userId);
+          }
         }
       }
-      console.log(room.players);
     } catch (error) {
       console.error(error);
     }

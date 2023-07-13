@@ -26,7 +26,7 @@ export class UploadController {
     }),
   )
   uploadFile(@UploadedFile() file: Express.Multer.File): string {
-    const url = `http://127.0.0.1/uploads/${file.filename}`;
+    const url = `http://143.248.200.49:80/uploads/${file.filename}`;
     console.log(file);
     return url;
   }

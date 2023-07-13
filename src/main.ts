@@ -32,6 +32,6 @@ async function bootstrap() {
     SwaggerModule.createDocument(app, config),
     options,
   );
-  await app.listen(443);
+  await app.listen(80);
 }
 bootstrap();
